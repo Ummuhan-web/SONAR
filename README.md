@@ -63,7 +63,7 @@ To deploy this CloudFormation template:
 ```sh
 aws cloudformation create-stack --stack-name my-vpc-stack --template-body file://vpc-stack.yaml --parameters ParameterKey=AvailabilityZones,ParameterValue="us-east-1a,us-east-1b,us-east-1c"
 
-
+```
 # VPC Stack Deployment
 
 ## Overview
