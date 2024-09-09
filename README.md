@@ -101,7 +101,7 @@ To use `vpc-stack.yaml` in another CloudFormation template, create a parent stac
 
 ```sh
 aws cloudformation create-stack --stack-name my-parent-stack --template-body file://parent-stack.yaml --parameters ParameterKey=VPCName,ParameterValue=my-vpc ParameterKey=CIDRBlock,ParameterValue=10.0.0.0/16 ParameterKey=AvailabilityZones,ParameterValue='us-east-1a,us-east-1b,us-east-1c'
-
+```
 
 # CloudFormation Template for ALB, Auto Scaling, EC2, and Amazon Aurora DB
 
