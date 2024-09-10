@@ -1,209 +1,328 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: VPC with Public, Private, and DB Subnets in 3 Availability Zones
+Description: VPC with Public, Private, and Database subnets across 3 AZs
 
 Parameters:
-  VPCName:
+  VPCCIDR:
     Type: String
-    Default: my-vpc
-    Description: The name of the VPC.
-
-  CIDRBlock:
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC
+  PublicSubnet1CIDR:
     Type: String
-    Default: '10.0.0.0/16'
-    Description: The CIDR block for the VPC.
-
-  AvailabilityZones:
-    Type: List<AWS::EC2::AvailabilityZone::Name>
-    Description: The list of availability zones to deploy the subnets in.
+    Default: 10.0.1.0/24
+    Description: CIDR block for Public Subnet 1
+  PublicSubnet2CIDR:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for Public Subnet 2
+  PublicSubnet3CIDR:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for Public Subnet 3
+  PrivateSubnet1CIDR:
+    Type: String
+    Default: 10.0.4.0/24
+    Description: CIDR block for Private Subnet 1
+  PrivateSubnet2CIDR:
+    Type: String
+    Default: 10.0.5.0/24
+    Description: CIDR block for Private Subnet 2
+  PrivateSubnet3CIDR:
+    Type: String
+    Default: 10.0.6.0/24
+    Description: CIDR block for Private Subnet 3
+  DBSubnet1CIDR:
+    Type: String
+    Default: 10.0.7.0/24
+    Description: CIDR block for Database Subnet 1
+  DBSubnet2CIDR:
+    Type: String
+    Default: 10.0.8.0/24
+    Description: CIDR block for Database Subnet 2
+  DBSubnet3CIDR:
+    Type: String
+    Default: 10.0.9.0/24
+    Description: CIDR block for Database Subnet 3
 
 Resources:
-  MyVPC:
-    Type: AWS::EC2::VPC
+  # VPC
+  VPC:
+    Type: 'AWS::EC2::VPC'
     Properties:
-      CidrBlock: !Ref CIDRBlock
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Ref VPCName
+          Value: MyVPC
 
-  MyInternetGateway:
-    Type: AWS::EC2::InternetGateway
+  # Internet Gateway for Public Subnets
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-igw"
+          Value: MyVPC-InternetGateway
 
-  MyVPCGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
-      VpcId: !Ref MyVPC
-      InternetGatewayId: !Ref MyInternetGateway
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
 
-  # Public, Private, and DB Subnets in Availability Zone 1
-  MyPublicSubnet1:
-    Type: AWS::EC2::Subnet
+  # Public Subnets (in 3 AZs)
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.1.0/24'
-      AvailabilityZone: !Select [0, !Ref AvailabilityZones]
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-public-subnet-1"
-
-  MyPrivateSubnet1:
-    Type: AWS::EC2::Subnet
+          Value: PublicSubnet1
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.2.0/24'
-      AvailabilityZone: !Select [0, !Ref AvailabilityZones]
-      Tags:
-        - Key: Name
-          Value: !Sub "${VPCName}-private-subnet-1"
-
-  MyDBSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.3.0/24'
-      AvailabilityZone: !Select [0, !Ref AvailabilityZones]
-      Tags:
-        - Key: Name
-          Value: !Sub "${VPCName}-db-subnet-1"
-
-  # Public, Private, and DB Subnets in Availability Zone 2
-  MyPublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.4.0/24'
-      AvailabilityZone: !Select [1, !Ref AvailabilityZones]
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-public-subnet-2"
-
-  MyPrivateSubnet2:
-    Type: AWS::EC2::Subnet
+          Value: PublicSubnet2
+  PublicSubnet3:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.5.0/24'
-      AvailabilityZone: !Select [1, !Ref AvailabilityZones]
-      Tags:
-        - Key: Name
-          Value: !Sub "${VPCName}-private-subnet-2"
-
-  MyDBSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.6.0/24'
-      AvailabilityZone: !Select [1, !Ref AvailabilityZones]
-      Tags:
-        - Key: Name
-          Value: !Sub "${VPCName}-db-subnet-2"
-
-  # Public, Private, and DB Subnets in Availability Zone 3
-  MyPublicSubnet3:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.7.0/24'
-      AvailabilityZone: !Select [2, !Ref AvailabilityZones]
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet3CIDR
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-public-subnet-3"
+          Value: PublicSubnet3
 
-  MyPrivateSubnet3:
-    Type: AWS::EC2::Subnet
+  # Private Subnets (in 3 AZs)
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.8.0/24'
-      AvailabilityZone: !Select [2, !Ref AvailabilityZones]
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-private-subnet-3"
-
-  MyDBSubnet3:
-    Type: AWS::EC2::Subnet
+          Value: PrivateSubnet1
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: '10.0.9.0/24'
-      AvailabilityZone: !Select [2, !Ref AvailabilityZones]
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-db-subnet-3"
-
-  MyRouteTable:
-    Type: AWS::EC2::RouteTable
+          Value: PrivateSubnet2
+  PrivateSubnet3:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
       Tags:
         - Key: Name
-          Value: !Sub "${VPCName}-route-table"
+          Value: PrivateSubnet3
 
-  MyPublicRoute:
-    Type: AWS::EC2::Route
+  # Database Subnets (in 3 AZs)
+  DBSubnet1:
+    Type: 'AWS::EC2::Subnet'
     Properties:
-      RouteTableId: !Ref MyRouteTable
-      DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref MyInternetGateway
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DBSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: DBSubnet1
+  DBSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DBSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: DBSubnet2
+  DBSubnet3:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DBSubnet3CIDR
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: DBSubnet3
 
-  MySubnetRouteTableAssociation1:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+  # NAT Gateway and Elastic IP for Private Subnets
+  NatGatewayEIP:
+    Type: 'AWS::EC2::EIP'
     Properties:
-      SubnetId: !Ref MyPublicSubnet1
-      RouteTableId: !Ref MyRouteTable
+      Domain: vpc
+  NatGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
 
-  MySubnetRouteTableAssociation2:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+  # Route Tables
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
     Properties:
-      SubnetId: !Ref MyPublicSubnet2
-      RouteTableId: !Ref MyRouteTable
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
 
-  MySubnetRouteTableAssociation3:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
     Properties:
-      SubnetId: !Ref MyPublicSubnet3
-      RouteTableId: !Ref MyRouteTable
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+
+  DBRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: DBRouteTable
+
+  # Routes for the Public Subnet
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # Routes for the Private Subnet (through NAT Gateway)
+  PrivateRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  # Subnet Associations with Route Tables
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable
+
+  DBSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref DBSubnet1
+      RouteTableId: !Ref DBRouteTable
+
+  DBSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref DBSubnet2
+      RouteTableId: !Ref DBRouteTable
+
+  DBSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref DBSubnet3
+      RouteTableId: !Ref DBRouteTable
 
 Outputs:
-  VPCId:
-    Description: "The ID of the VPC"
-    Value: !Ref MyVPC
+  VPCID:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+    Export:
+      Name: VPCID
 
-  PublicSubnet1Id:
-    Description: "The ID of the first public subnet"
-    Value: !Ref MyPublicSubnet1
+  PublicSubnet1:
+    Description: Public Subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: PublicSubnet1
 
-  PrivateSubnet1Id:
-    Description: "The ID of the first private subnet"
-    Value: !Ref MyPrivateSubnet1
+  PublicSubnet2:
+    Description: Public Subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: PublicSubnet2
 
-  DBSubnet1Id:
-    Description: "The ID of the first DB subnet"
-    Value: !Ref MyDBSubnet1
+  PublicSubnet3:
+    Description: Public Subnet 3 ID
+    Value: !Ref PublicSubnet3
+    Export:
+      Name: PublicSubnet3
 
-  PublicSubnet2Id:
-    Description: "The ID of the second public subnet"
-    Value: !Ref MyPublicSubnet2
+  PrivateSubnet1:
+    Description: Private Subnet 1 ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: PrivateSubnet1
 
-  PrivateSubnet2Id:
-    Description: "The ID of the second private subnet"
-    Value: !Ref MyPrivateSubnet2
+  PrivateSubnet2:
+    Description: Private Subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: PrivateSubnet2
 
-  DBSubnet2Id:
-    Description: "The ID of the second DB subnet"
-    Value: !Ref MyDBSubnet2
+  PrivateSubnet3:
+    Description: Private Subnet 3 ID
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: PrivateSubnet3
 
-  PublicSubnet3Id:
-    Description: "The ID of the third public subnet"
-    Value: !Ref MyPublicSubnet3
+  DBSubnet1:
+    Description: DB Subnet 1 ID
+    Value: !Ref DBSubnet1
+    Export:
+      Name: DBSubnet1
 
-  PrivateSubnet3Id:
-    Description: "The ID of the third private subnet"
-    Value: !Ref MyPrivateSubnet3
+  DBSubnet2:
+    Description: DB Subnet 2 ID
+    Value: !Ref DBSubnet2
+    Export:
+      Name: DBSubnet2
 
-  DBSubnet3Id:
-    Description: "The ID of the third DB subnet"
-    Value: !Ref MyDBSubnet3
+  DBSubnet3:
+    Description: DB Subnet 3 ID
+    Value: !Ref DBSubnet3
+    Export:
+      Name: DBSubnet3

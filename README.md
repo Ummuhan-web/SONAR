@@ -1,158 +1,101 @@
-# AWS CloudFormation Template: VPC with Multi-AZ Subnets
+# VPC CloudFormation Template
 
-## Overview
+This CloudFormation template creates a Virtual Private Cloud (VPC) with a flexible and modular design for use across other stacks. It provisions a VPC along with one public, one private, and one database subnet, distributed across three Availability Zones (AZs) in a single AWS region. The VPC and its components are designed to be exported for use in other CloudFormation stacks, such as infrastructure templates, using AWS CloudFormation's `ImportValue` function.
 
-This template sets up a Virtual Private Cloud (VPC) in AWS with subnets distributed across multiple Availability Zones (AZs). Specifically, it creates:
+## Architecture
 
-- A VPC with a CIDR block of `10.0.0.0/16`
-- Public, private, and database subnets in three Availability Zones
+The template builds a VPC with the following components:
 
-## Explanation
-
-### VPC Creation
-
-**`MyVPC`**:
-- Defines the VPC with a CIDR block of `10.0.0.0/16`.
-
-### Internet Gateway
-
-**`MyInternetGateway`**:
-- Provides internet access to the public subnets.
+### VPC
+The main VPC where all subnets will reside, with a configurable CIDR block passed as a parameter. The VPC supports multiple subnet types, including public, private, and database subnets.
 
 ### Subnets
 
-- **Public Subnets**:
-  - **`MyPublicSubnet1`, `MyPublicSubnet2`, `MyPublicSubnet3`**: These subnets are configured to provide internet access. They are typically used for resources that need to be accessible from the internet, such as web servers.
+- **Public Subnets**: Three public subnets, one in each of the three AZs, where instances can be launched with public IPs to provide internet access.
+- **Private Subnets**: Three private subnets, one in each AZ, where instances can communicate outbound to the internet through the NAT Gateway.
+- **Database Subnets**: Three isolated subnets across AZs designed for use by database services such as Amazon RDS or Aurora. These subnets do not have direct internet access for security purposes.
 
-- **Private Subnets**:
-  - **`MyPrivateSubnet1`, `MyPrivateSubnet2`, `MyPrivateSubnet3`**: These subnets are used for resources that do not need direct internet access, such as application servers. They are isolated from the internet but can access resources in the public subnets if necessary.
+### Internet Gateway and NAT Gateway
 
-- **DB Subnets**:
-  - **`MyDBSubnet1`, `MyDBSubnet2`, `MyDBSubnet3`**: Dedicated for database instances. These subnets are designed to host databases that need to be isolated from both the public and private subnets, providing additional security.
+- **Internet Gateway (IGW)**: Provides internet access for public subnets, allowing inbound and outbound traffic to resources such as web servers.
+- **NAT Gateway (NGW)**: Enables instances in the private subnets to access the internet for updates or other services while remaining inaccessible from the internet.
 
-### Route Table and Associations
+### Route Tables
 
-- **`MyRouteTable`**:
-  - Configures routing for the VPC. It determines how traffic is directed within the VPC and to/from the internet.
-
-- **`MyPublicRoute`**:
-  - Routes traffic to the internet via the Internet Gateway. This route is associated with the public subnets to enable internet access.
-
-- **Subnet Associations**:
-  - Associates the public subnets with the route table. This allows instances in these subnets to communicate with the internet.
+- **Public Route Table**: Routes traffic from public subnets to the internet via the Internet Gateway.
+- **Private Route Table**: Routes traffic from private subnets through the NAT Gateway for outbound internet access.
+- **Database Route Table**: These route tables are dedicated to the database subnets, which are typically isolated from the internet unless explicitly configured otherwise.
 
 ### Outputs
 
-- Provides IDs for the VPC and subnets (public, private, and DB). These outputs are useful for referencing in other CloudFormation stacks or configurations, allowing you to easily integrate this VPC setup with other AWS resources.
+Each of the following components is exported so that they can be referenced by other CloudFormation stacks using `Fn::ImportValue`:
 
-## Deployment
+- VPC ID
+- Public Subnet IDs (across 3 AZs)
+- Private Subnet IDs (across 3 AZs)
+- Database Subnet IDs (across 3 AZs)
 
-To deploy this CloudFormation template:
+By using this VPC CloudFormation stack, other stacks (e.g., those with Application Load Balancers, EC2 instances, and Aurora) can import the VPC and subnet IDs, avoiding the need to duplicate network configuration.
 
-1. Save the YAML template as `vpc-stack.yaml`.
-2. Use the AWS CloudFormation console or AWS CLI to create a stack.
+---
 
-### Deploy Using CloudFormation Console
+### Example Use Case:
 
-- Go to the AWS CloudFormation console.
-- Create a new stack and upload the `vpc-stack.yaml` file.
-- Specify the parameters such as `AvailabilityZones`.
+Once the VPC stack is created, other infrastructure stacks can import the VPC and subnet components and directly reference the exported values. This modular approach allows flexibility, reuse, and simplified management of your AWS infrastructure.
 
-### Deploy Using AWS CLI
 
-```sh
-aws cloudformation create-stack --stack-name my-vpc-stack --template-body file://vpc-stack.yaml --parameters ParameterKey=AvailabilityZones,ParameterValue="us-east-1a,us-east-1b,us-east-1c"
+# Infrastructure CloudFormation Template
 
-```
-# VPC Stack Deployment
+This CloudFormation template builds the infrastructure using the VPC created from a previous template. It imports the VPC, subnets, and necessary networking components and provisions the following:
 
-## Overview
+- **Application Load Balancer (ALB)** in the public subnets.
+- **Auto Scaling group** with EC2 instances located in different private subnets.
+- EC2 instances serve a "Hello World" webpage.
+- **Amazon Aurora** database in the DB subnets.
+- **NAT Gateway** in the public subnet.
 
-To use `vpc-stack.yaml` in another CloudFormation template, create a parent stack that references the VPC stack as a nested stack.
+This template assumes that the **VPC**, **Public**, **Private**, and **DB subnets** have already been created in another stack and are exported using the `Export` function. We import them using the `Fn::ImportValue` function.
 
-## Configuration
+## Breakdown
 
-### Nested Stack Reference
+### Imports:
+The template imports the VPC and subnets (public, private, and DB) created by the previous stack using `Fn::ImportValue`.
 
-- **Type:** `AWS::CloudFormation::Stack`
-- **TemplateURL:** Point to the location of `vpc-stack.yaml` in S3. Upload `vpc-stack.yaml` to an S3 bucket and replace the URL accordingly.
+### Application Load Balancer (ALB):
+- ALB is provisioned across the three public subnets and listens on port 80 (HTTP).
+- It forwards traffic to a target group containing the EC2 instances in the private subnets.
 
-### Outputs
+### Auto Scaling Group:
+- EC2 instances are launched in three private subnets using an **Auto Scaling Group**.
+- The instances are web servers that serve a simple "Hello World" HTML page.
 
-- Retrieves outputs from the nested VPC stack to make them available in the parent stack.
+### Amazon Aurora:
+- An Amazon Aurora **DB Cluster** is created in the three DB subnets, and its security group allows traffic from the EC2 instances via port 3306 (MySQL).
 
-## Deployment Steps
+### Security Groups:
+- Separate security groups are configured for the ALB, EC2 instances, and Aurora DB.
+- The EC2 security group allows HTTP traffic from the ALB, and the Aurora security group allows MySQL traffic from the EC2 instances.
 
-### 1. Upload the VPC Stack Template to S3
+## Reusability:
+This template can be reused for additional Availability Zones by importing the respective subnets in the same region.
 
-- Upload `vpc-stack.yaml` to an S3 bucket.
 
-### 2. Deploy the Parent Stack
 
-- Save the parent template as `parent-stack.yaml`.
 
-#### Using the AWS CloudFormation Console
 
-1. Open the AWS CloudFormation console.
-2. Create a new stack and upload the `parent-stack.yaml` file.
-3. Specify the parameters for the VPC stack.
 
-#### Using AWS CLI
 
-```sh
-aws cloudformation create-stack --stack-name my-parent-stack --template-body file://parent-stack.yaml --parameters ParameterKey=VPCName,ParameterValue=my-vpc ParameterKey=CIDRBlock,ParameterValue=10.0.0.0/16 ParameterKey=AvailabilityZones,ParameterValue='us-east-1a,us-east-1b,us-east-1c'
-```
 
-# CloudFormation Template for ALB, Auto Scaling, EC2, and Amazon Aurora DB
 
-This CloudFormation template provisions an infrastructure across **three Availability Zones (AZs)**, including:
 
-- An Application Load Balancer (ALB) in public subnets.
-- Auto Scaling for EC2 instances in public subnets that serve a "Hello World" webpage.
-- Amazon Aurora DB instances in private DB subnets.
-- VPC components (such as subnets and route tables) imported from a parent CloudFormation stack.
 
-## Architecture Overview
 
-- **Application Load Balancer (ALB)**: The ALB is deployed in public subnets across three AZs to distribute traffic to the EC2 instances.
-- **Auto Scaling EC2 Instances**: EC2 instances are launched and scaled in public subnets to meet traffic demands.
-- **Amazon Aurora DB**: The Aurora DB instances are hosted in private DB subnets to ensure secure communication between the web server and database.
-- **VPC Components**: All network components such as VPC, subnets, and route tables are imported from a parent stack stored in S3.
 
-## Template Breakdown
 
-### VPC Import
-The VPC and its related subnets are imported from the parent stack located at `https://s3.amazonaws.com/my-bucket/vpc-stack.yaml`. This includes public, private, and DB subnets spread across three availability zones.
 
-### ALB & Auto Scaling
-- The ALB is set up in three public subnets, one in each AZ, to balance traffic across multiple EC2 instances.
-- An Auto Scaling group is configured to manage the number of EC2 instances in the public subnets, based on the incoming traffic.
 
-### EC2 Instance
-- EC2 instances are automatically launched in the public subnets via Auto Scaling and serve a "Hello World" webpage using Apache.
-- These EC2 instances can securely communicate with the Amazon Aurora DB, which resides in private DB subnets.
 
-### Amazon Aurora DB
-- An Aurora DB cluster is deployed across private DB subnets in all three availability zones.
-- The security group configuration allows secure communication between the EC2 instances (in the public subnets) and the DB (in the private subnets).
 
-### Security Groups
-- A security group is applied to the ALB, allowing HTTP traffic from the public internet (port 80).
-- Another security group is applied to the EC2 instances and the Amazon Aurora DB, allowing MySQL traffic between them over port 3306.
 
-### Subnet Configuration
-The template supports three availability zones, each with distinct subnets for public, private, and database traffic. This ensures traffic isolation and better routing efficiency.
-
-## Customization
-
-- **Amazon Linux 2 AMI**: Replace the AMI ID `ami-0c55b159cbfafe1f0` with the latest Amazon Linux 2 AMI for your region.
-- **EC2 Instance Type**: Adjust the EC2 instance type (`t2.micro` by default) as per your requirements.
-- **Key Pair**: Replace the key pair with your own for SSH access to the EC2 instances.
-- **Database Credentials**: Set the appropriate values for the Aurora DB master username and password.
-- **VPC Import**: Ensure that the parent VPC stack provides the necessary public, private, and DB subnets across all three AZs.
-
-## Conclusion
-
-This CloudFormation template is reusable and flexible for any three-AZ architecture with separate subnets for public, private, and database traffic. It ensures high availability and fault tolerance by distributing resources across multiple availability zones.
 
 
