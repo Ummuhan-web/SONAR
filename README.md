@@ -52,7 +52,7 @@ This CloudFormation template builds the infrastructure using the VPC created fro
 - **Auto Scaling group** with EC2 instances located in different private subnets.
 - EC2 instances serve a "Hello World" webpage.
 - **Amazon Aurora** database in the DB subnets.
-- **NAT Gateway** in the public subnet.
+- **NAT Gateway** in the public subnet. One NAT Gateway is provisioned per AZ, and each private subnet routes traffic to the corresponding NAT Gateway.
 
 This template assumes that the **VPC**, **Public**, **Private**, and **DB subnets** have already been created in another stack and are exported using the `Export` function. We import them using the `Fn::ImportValue` function.
 

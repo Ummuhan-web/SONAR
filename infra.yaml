@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Infrastructure Template with ALB, EC2 Auto Scaling, and Amazon Aurora using existing VPC and Subnets
+Description: Infrastructure Template with ALB, Auto Scaling, Aurora, and NAT Gateway per AZ using existing VPC and Subnets
 
 Parameters:
   InstanceType:
@@ -61,6 +61,89 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Description: Import DB Subnet 3
     Value: !ImportValue DBSubnet3
+
+  # NAT Gateways and EIPs for Each AZ
+  EIP1:
+    Type: 'AWS::EC2::EIP'
+
+  NATGateway1:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt EIP1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  EIP2:
+    Type: 'AWS::EC2::EIP'
+
+  NATGateway2:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt EIP2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  EIP3:
+    Type: 'AWS::EC2::EIP'
+
+  NATGateway3:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt EIP3.AllocationId
+      SubnetId: !Ref PublicSubnet3
+
+  # Private Subnet Route Tables to NAT Gateways
+  PrivateRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateRoute1:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateRoute2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  PrivateRouteTable3:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateRoute3:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway3
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable3
 
   # Application Load Balancer (ALB)
   ALB:
@@ -180,11 +263,11 @@ Resources:
         - !Ref DBSecurityGroup
       BackupRetentionPeriod: 7
 
-  # DB Subnet Group
+  # Aurora DB Subnet Group
   DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
-      DBSubnetGroupDescription: Subnet group for Aurora DB
+      DBSubnetGroupDescription: Aurora DB Subnet Group
       SubnetIds:
         - !Ref DBSubnet1
         - !Ref DBSubnet2
@@ -204,7 +287,6 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-
 Outputs:
   ALBEndpoint:
     Description: The DNS name of the ALB
@@ -216,4 +298,4 @@ Outputs:
 
   AuroraDBClusterID:
     Description: The Aurora DB Cluster ID
-    Value: !Ref AuroraDBCluster
+    Value: !Ref AuroraDBCluster          
