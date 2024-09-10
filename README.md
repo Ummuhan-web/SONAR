@@ -79,6 +79,41 @@ The template imports the VPC and subnets (public, private, and DB) created by th
 ## Reusability:
 This template can be reused for additional Availability Zones by importing the respective subnets in the same region.
 
+# Explanation of CloudFormation Outputs
+
+The following outputs are provided by the CloudFormation template for the infrastructure:
+
+## 1. VPC ID
+- **Description**: Outputs the ID of the VPC.
+- **Usage**: This can be used to identify and reference the VPC where resources are provisioned.
+
+## 2. Public Subnets & Private Subnets
+- **Description**: Outputs the IDs of the public and private subnets across the three Availability Zones.
+- **Usage**: These subnet IDs can be used for placing resources in specific subnets, like EC2 instances, load balancers, etc.
+
+## 3. NAT Gateways
+- **Description**: Outputs the IDs of the NAT Gateways created in each AZ.
+- **Usage**: The NAT Gateway IDs are used to route outbound internet traffic from private subnets through the respective NAT Gateway in each AZ.
+
+## 4. ALB DNS Name
+- **Description**: Outputs the DNS name of the Application Load Balancer (ALB).
+- **Usage**: The DNS name is used to access the web application served by the EC2 instances behind the ALB.
+
+## 5. Auto Scaling Group Name
+- **Description**: Outputs the name of the EC2 Auto Scaling group.
+- **Usage**: This is useful for managing and monitoring the EC2 Auto Scaling group, which ensures the web server instances are highly available.
+
+## 6. Aurora DB Cluster Endpoint
+- **Description**: Outputs the endpoint of the Amazon Aurora DB Cluster.
+- **Usage**: The endpoint is used to connect the application (running on EC2) to the Aurora database for read/write operations.
+
+## 7. Aurora DB Cluster Read Endpoint
+- **Description**: Outputs the read-only endpoint of the Aurora DB Cluster.
+- **Usage**: The read endpoint is used for offloading read operations to improve the performance and scalability of the database.
+
+These outputs are crucial for understanding and utilizing the resources provisioned by the CloudFormation template, making it easier to manage, connect, and scale the infrastructure.
+
+
 
 
 

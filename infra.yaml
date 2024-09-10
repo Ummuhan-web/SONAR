@@ -288,14 +288,72 @@ Resources:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
 Outputs:
-  ALBEndpoint:
-    Description: The DNS name of the ALB
+  VPCID:
+    Description: The VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: VPCID
+
+  PublicSubnet1ID:
+    Description: Public Subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: PublicSubnet1ID
+
+  PublicSubnet2ID:
+    Description: Public Subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: PublicSubnet2ID
+
+  PublicSubnet3ID:
+    Description: Public Subnet 3 ID
+    Value: !Ref PublicSubnet3
+    Export:
+      Name: PublicSubnet3ID
+
+  PrivateSubnet1ID:
+    Description: Private Subnet 1 ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: PrivateSubnet1ID
+
+  PrivateSubnet2ID:
+    Description: Private Subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: PrivateSubnet2ID
+
+  PrivateSubnet3ID:
+    Description: Private Subnet 3 ID
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: PrivateSubnet3ID
+
+  NATGateway1ID:
+    Description: NAT Gateway 1 ID
+    Value: !Ref NATGateway1
+
+  NATGateway2ID:
+    Description: NAT Gateway 2 ID
+    Value: !Ref NATGateway2
+
+  NATGateway3ID:
+    Description: NAT Gateway 3 ID
+    Value: !Ref NATGateway3
+
+  ALBDNS:
+    Description: DNS name of the ALB
     Value: !GetAtt ALB.DNSName
 
-  AutoScalingGroupID:
-    Description: The Auto Scaling Group ID
+  EC2AutoScalingGroupName:
+    Description: Auto Scaling Group Name for EC2 instances
     Value: !Ref AutoScalingGroup
 
-  AuroraDBClusterID:
-    Description: The Aurora DB Cluster ID
-    Value: !Ref AuroraDBCluster          
+  AuroraDBClusterEndpoint:
+    Description: Endpoint for the Aurora DB Cluster
+    Value: !GetAtt AuroraDBCluster.Endpoint.Address
+
+  AuroraDBClusterReadEndpoint:
+    Description: Read-only Endpoint for the Aurora DB Cluster
+    Value: !GetAtt AuroraDBCluster.ReadEndpoint.Address         
