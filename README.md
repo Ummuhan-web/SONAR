@@ -93,7 +93,7 @@ The template imports the VPC and subnets (public, private, and DB) created by th
 ## Reusability:
 This template can be reused for additional Availability Zones by importing the respective subnets in the same region.
 
-# Explanation of CloudFormation Outputs
+# Explanation of Infra CloudFormation Outputs
 
 The following outputs are provided by the CloudFormation template for the infrastructure:
 
