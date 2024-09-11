@@ -256,8 +256,8 @@ Resources:
     Properties:
       Engine: aurora
       EngineMode: provisioned
-      MasterUsername: masteruser
-      MasterUserPassword: masterpassword
+      MasterUsername: !Sub '{{resolve:ssm-secure:/myapp/db/masteruser:1}}'
+      MasterUserPassword: !Sub '{{resolve:ssm-secure:/myapp/db/masterpassword:1}}'
       DBSubnetGroupName: !Ref DBSubnetGroup
       VpcSecurityGroupIds:
         - !Ref DBSecurityGroup

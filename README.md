@@ -72,6 +72,20 @@ The template imports the VPC and subnets (public, private, and DB) created by th
 ### Amazon Aurora:
 - An Amazon Aurora **DB Cluster** is created in the three DB subnets, and its security group allows traffic from the EC2 instances via port 3306 (MySQL).
 
+## Secure Database Credentials with AWS SSM Parameter Store
+
+# SSM Parameter Store
+
+- Replace `/myapp/db/masteruser` and `/myapp/db/masterpassword` with the paths where your secure strings are stored.
+- The `ssm-secure` syntax ensures that values are retrieved securely.
+
+## Benefits
+
+- **Secure Storage**: Credentials are stored securely and are not hardcoded in the template.
+- **Encryption**: Both Secrets Manager and SSM Parameter Store automatically encrypt secrets at rest.
+- **Auditing and Rotation**: Secrets Manager allows you to rotate credentials automatically and provides auditing capabilities.
+
+
 ### Security Groups:
 - Separate security groups are configured for the ALB, EC2 instances, and Aurora DB.
 - The EC2 security group allows HTTP traffic from the ALB, and the Aurora security group allows MySQL traffic from the EC2 instances.
