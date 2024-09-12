@@ -1,7 +1,3 @@
-# AWS Architecture for High Availability and Scalability
-
-This document provides guidelines for designing an AWS architecture for a highly available application across multiple Availability Zones (AZs). It covers the optimal number of Application Load Balancers (ALBs) and Auto Scaling Groups (ASGs) to ensure redundancy, scalability, and cost-effectiveness.
-
 ## Application Load Balancers (ALBs)
 
 ### Single ALB
@@ -69,7 +65,7 @@ For a typical web application deployed across multiple AZs, you might have:
 This approach ensures a balance between high availability, scalability, and cost-effectiveness. Adjust the design based on your application’s specific needs and load characteristics.
 
 
-# AWS NAT Gateway and Aurora Replica Promotion
+# AWS NAT Gateway 
 
 ## NAT Gateway
 
@@ -119,7 +115,7 @@ The most common way to use a NAT Gateway in a multi-AZ setup within one region i
 
 This is the best practice recommended by AWS for a highly available and resilient NAT Gateway setup.
 
-## Aurora Replica Promotion
+# Aurora Replica Promotion
 
 Aurora uses a distributed, fault-tolerant storage system that spans multiple Availability Zones (AZs) in an AWS region. When the primary instance (writer) fails, Aurora automatically promotes one of the Aurora Replicas (read-only instances) in a different AZ to be the new primary instance (writer).
 
