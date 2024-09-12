@@ -52,7 +52,7 @@ The Auto Scaling Group maintains the appropriate number of EC2 instances across 
       DesiredCapacity: 3
       TargetGroupARNs:
         - !Ref ALBTargetGroup 
-        ```
+```
 
 ### 3. **Route 53 Failover Routing**
 Route 53 provides DNS-based failover routing to ensure that traffic is directed to healthy resources. It monitors the health of the primary resources and automatically routes traffic to a backup resource if the primary resource fails.
@@ -79,7 +79,7 @@ Deploying a NAT Gateway in each Availability Zone ensures that resources in priv
     Properties:
       AllocationId: !GetAtt EIP3.AllocationId
       SubnetId: !Ref PublicSubnet3 
-      ```
+```
 
 
 ### 5. Aurora Replica Promotion**
@@ -97,7 +97,7 @@ Amazon Aurora automatically promotes a read replica to be the new primary instan
       VpcSecurityGroupIds:
         - !Ref DBSecurityGroup
       BackupRetentionPeriod: 
-      ```
+  ```
 
 ### 6. **Health Checks**
 Health checks ensure that the Load Balancer and instances are operational. Route 53 uses health checks to determine the health of endpoints and Route 53 DNS records, while ALB performs health checks on targets within the Auto Scaling Group.
@@ -124,4 +124,4 @@ The ALB performs health checks on the instances registered with the Target Group
 - **Review and Improve**: After each test, review the outcomes and refine the DR plan based on findings. Ensure that all team members are familiar with their roles and responsibilities during a disaster.
 
 By considering these additional factors, you can further strengthen your disaster recovery strategy and improve the resilience of your infrastructure.
-  ...
+
