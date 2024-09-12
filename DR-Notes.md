@@ -33,7 +33,7 @@ The ALB distributes incoming traffic across multiple AZs, ensuring high availabi
       SecurityGroups:
         - !Ref ALBSecurityGroup
       Type: application 
-      ```
+```
 
 ### 2. **Auto Scaling Group (ASG)**
 The Auto Scaling Group maintains the appropriate number of EC2 instances across AZs. It automatically adjusts the number of instances based on demand and replaces unhealthy instances in case of failure.
