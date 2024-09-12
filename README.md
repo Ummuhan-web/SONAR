@@ -37,12 +37,6 @@ Each of the following components is exported so that they can be referenced by o
 
 By using this VPC CloudFormation stack, other stacks (e.g., those with Application Load Balancers, EC2 instances, and Aurora) can import the VPC and subnet IDs, avoiding the need to duplicate network configuration.
 
----
-
-### Example Use Case:
-
-Once the VPC stack is created, other infrastructure stacks can import the VPC and subnet components and directly reference the exported values. This modular approach allows flexibility, reuse, and simplified management of your AWS infrastructure.
-
 
 # Infrastructure CloudFormation Template
 
