@@ -204,6 +204,28 @@ Resources:
           CidrIp: 0.0.0.0/0
 
   # Auto Scaling Group for EC2 instances
+  AutoScalingRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: AutoScalingRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: autoscaling.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAutoScaling
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforLaunchWizard
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+
+  AutoScalingInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref AutoScalingRole
+
   AutoScalingLaunchConfig:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
@@ -212,6 +234,7 @@ Resources:
       KeyName: !Ref KeyPairName
       SecurityGroups:
         - !Ref EC2SecurityGroup
+      IamInstanceProfile: !Ref AutoScalingInstanceProfile
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -287,6 +310,7 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+
 Outputs:
   VPCID:
     Description: The VPC ID
@@ -356,4 +380,4 @@ Outputs:
 
   AuroraDBClusterReadEndpoint:
     Description: Read-only Endpoint for the Aurora DB Cluster
-    Value: !GetAtt AuroraDBCluster.ReadEndpoint.Address         
+    Value: !GetAtt AuroraDBCluster.ReadEndpoint.Address

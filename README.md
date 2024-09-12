@@ -90,6 +90,19 @@ The template imports the VPC and subnets (public, private, and DB) created by th
 - Separate security groups are configured for the ALB, EC2 instances, and Aurora DB.
 - The EC2 security group allows HTTP traffic from the ALB, and the Aurora security group allows MySQL traffic from the EC2 instances.
 
+
+### IAM Instance Profile and IAM Role
+
+- **IAM Instance Profile for EC2**: Added AutoScalingInstanceProfile to associate the role with EC2 instances.
+- **IAM Role for Auto Scaling Group**: Added AutoScalingRole with policies to allow Auto Scaling to manage EC2 instances.
+
+    1. **Assume Role Policy**: This allows Auto Scaling to assume the role.
+    2. **Managed Policies**: These provide the necessary permissions for Auto Scaling and the instances it manages. Common policies include:
+    - `AmazonEC2RoleforAutoScaling`: Grants permissions for Auto Scaling to interact with EC2 instances.
+    - `AmazonEC2RoleforLaunchWizard`: Allows for the management of EC2 instances during the launch process.
+    - `AmazonSSMReadOnlyAccess`: Provides read-only access to SSM parameters, useful for accessing parameters such as database credentials.
+
+
 ## Reusability:
 This template can be reused for additional Availability Zones by importing the respective subnets in the same region.
 
