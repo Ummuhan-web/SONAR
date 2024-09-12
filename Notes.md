@@ -132,7 +132,7 @@ Aurora uses a distributed, fault-tolerant storage system that spans multiple Ava
 By default, when you create an Aurora DB cluster with at least one Aurora Replica, automatic failover is enabled. You don’t have to configure anything special, but it’s important to ensure that you have Aurora Replicas in different AZs to take full advantage of this feature.
 
 
-## Using AWS CloudFront in Front of a Load Balancer
+# Using AWS CloudFront in Front of a Load Balancer
 
 Using AWS CloudFront in front of a Load Balancer offers several benefits related to performance, security, and cost management. Here’s why you might use CloudFront in this setup:
 
@@ -164,7 +164,7 @@ Using AWS CloudFront in front of a Load Balancer offers several benefits related
 Using CloudFront in front of a Load Balancer enhances performance, security, and cost-efficiency, making it a common architectural choice for many applications.
 
 
-## Use Cases of Amazon Route 53
+# Use Cases of Amazon Route 53
 
 ### 1. Website Hosting
 You can register a domain and route traffic to various AWS resources like:
