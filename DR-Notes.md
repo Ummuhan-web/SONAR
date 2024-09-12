@@ -1,13 +1,13 @@
 # Disaster Recovery Plan
 
 ## Objective
-The objective of this Disaster Recovery Plan is to ensure service continuity, resilience, and quick recovery in the event of a system failure. The plan ensures that your infrastructure remains highly available across multiple Availability Zones (AZs) using AWS services, including Auto Scaling, Route 53, NAT Gateways, Aurora, and Application Load Balancers (ALB).
+The objective of this Disaster Recovery Plan is to ensure service continuity, resilience, and quick recovery in the event of a system failure. The plan ensures that our infrastructure remains highly available across multiple Availability Zones (AZs) using AWS services, including Auto Scaling, Route 53, NAT Gateways, Aurora, and Application Load Balancers (ALB).
 
 ## Strategy
 The disaster recovery strategy includes:
 - **Multi-AZ Redundancy**: Deploy resources across multiple AZs for high availability.
 - **Auto Scaling**: Automatically recover from failures by scaling EC2 instances.
-- **Route 53 Failover**: Redirect traffic to healthy resources in case of failure.
+- **Route 53 Failover**: Redirect traffic to healthy resources in case of failure (this is a crucial part of the infrastructure, therefore added to the plan although it was not required in the assessment).
 - **NAT Gateway Per AZ**: Ensure private subnet access to the internet, even in case of AZ failure.
 - **Aurora Replica Promotion**: Promote Aurora database replicas during primary database failure.
 - **Health Checks**: Continuously monitor the health of the infrastructure components.
@@ -15,7 +15,7 @@ The disaster recovery strategy includes:
 ## Key Components
 
 ### 1. **Application Load Balancer (ALB)**
-The ALB distributes incoming traffic across multiple AZs, ensuring high availability. It routes traffic only to healthy targets and can failover if an AZ becomes unavailable.
+The ALB distributes incoming traffic across multiple AZs, ensuring high availability. It routes traffic only to healthy targets when there's failover in an AZ.
 
 ```yaml
   ALB:
@@ -55,7 +55,7 @@ The Auto Scaling Group maintains the appropriate number of EC2 instances across 
 ```
 
 ### 3. **Route 53 Failover Routing**
-Route 53 provides DNS-based failover routing to ensure that traffic is directed to healthy resources. It monitors the health of the primary resources and automatically routes traffic to a backup resource if the primary resource fails.
+Route 53 provides DNS-based failover routing to ensure that traffic is directed to healthy resources. It monitors the health of the primary resources and automatically re-routes traffic to a backup resource if the primary resource fails.
 
 
 ### 4. **NAT Gateway Per AZ**
@@ -83,7 +83,7 @@ Deploying a NAT Gateway in each Availability Zone ensures that resources in priv
 
 
 ### 5. Aurora Replica Promotion**
-Amazon Aurora automatically promotes a read replica to be the new primary instance in the event of a primary instance failure. This process is automated and typically completed within seconds to ensure minimal downtime.
+Amazon Aurora automatically promotes a read replica to be the new primary instance with write capability in the event of a primary instance failure. This process is automated and typically completed within seconds to ensure minimal downtime.
 
 ```yaml
   AuroraDBCluster:
@@ -108,7 +108,8 @@ Route 53 health checks monitor the availability and performance of resources, di
 #### Health Check for Application Load Balancer (ALB)
 The ALB performs health checks on the instances registered with the Target Group, ensuring only healthy instances receive traffic.
 
-## Additional Considerations
+## Further Considerations for DR
+By considering the following additional factors, we can further strengthen our disaster recovery strategy and improve the resilience of our infrastructure. These will be dependent on our cost considerations and the extent of our customer outreach requirements. 
 
 ### Cross-Region Disaster Recovery
 - **Backup Infrastructure**: Consider setting up a backup infrastructure in a separate AWS region to enhance disaster recovery capabilities. This includes replicating key resources and data to ensure business continuity in case of a regional outage.
@@ -123,5 +124,4 @@ The ALB performs health checks on the instances registered with the Target Group
 - **Simulate Failures**: Regularly test the disaster recovery plan by simulating various failure scenarios such as Availability Zone (AZ) failure, instance failure, or database failure. This ensures that all components of the DR plan function as expected.
 - **Review and Improve**: After each test, review the outcomes and refine the DR plan based on findings. Ensure that all team members are familiar with their roles and responsibilities during a disaster.
 
-By considering these additional factors, you can further strengthen your disaster recovery strategy and improve the resilience of your infrastructure.
 
