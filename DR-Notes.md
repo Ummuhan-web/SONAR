@@ -32,7 +32,7 @@ The ALB distributes incoming traffic across multiple AZs, ensuring high availabi
           Value: '60'
       SecurityGroups:
         - !Ref ALBSecurityGroup
-      Type: application
+      Type: application ```
 
 ### 2. **Auto Scaling Group (ASG)**
 The Auto Scaling Group maintains the appropriate number of EC2 instances across AZs. It automatically adjusts the number of instances based on demand and replaces unhealthy instances in case of failure.
@@ -50,7 +50,7 @@ The Auto Scaling Group maintains the appropriate number of EC2 instances across 
       MaxSize: 3
       DesiredCapacity: 3
       TargetGroupARNs:
-        - !Ref ALBTargetGroup
+        - !Ref ALBTargetGroup ```
 
 ### 3. **Route 53 Failover Routing**
 Route 53 provides DNS-based failover routing to ensure that traffic is directed to healthy resources. It monitors the health of the primary resources and automatically routes traffic to a backup resource if the primary resource fails.
@@ -76,7 +76,7 @@ Deploying a NAT Gateway in each Availability Zone ensures that resources in priv
     Type: 'AWS::EC2::NatGateway'
     Properties:
       AllocationId: !GetAtt EIP3.AllocationId
-      SubnetId: !Ref PublicSubnet3
+      SubnetId: !Ref PublicSubnet3 ```
 
 
 ### 5. Aurora Replica Promotion**
@@ -93,7 +93,7 @@ Amazon Aurora automatically promotes a read replica to be the new primary instan
       DBSubnetGroupName: !Ref DBSubnetGroup
       VpcSecurityGroupIds:
         - !Ref DBSecurityGroup
-      BackupRetentionPeriod: 
+      BackupRetentionPeriod: ```
 
 ### 6. **Health Checks**
 Health checks ensure that the Load Balancer and instances are operational. Route 53 uses health checks to determine the health of endpoints and Route 53 DNS records, while ALB performs health checks on targets within the Auto Scaling Group.
