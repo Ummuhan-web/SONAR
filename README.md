@@ -1,157 +1,78 @@
-# VPC CloudFormation Template
+# CloudFormation Template for Highly Available VPC with Public, Private, and Database Subnets Across 3 AZs
 
-This CloudFormation template creates a Virtual Private Cloud (VPC) with a flexible and modular design for use across other stacks. It provisions a VPC along with one public, one private, and one database subnet, distributed across three Availability Zones (AZs) in a single AWS region. The VPC and its components are designed to be exported for use in other CloudFormation stacks, such as infrastructure templates, using AWS CloudFormation's `ImportValue` function.
+## Overview
 
-## Architecture
+This CloudFormation template creates a highly available Virtual Private Cloud (VPC) architecture. It includes public, private, and database subnets spread across three Availability Zones (AZs) in a single AWS region. The stack also provisions essential resources like an Application Load Balancer (ALB), Auto Scaling Group, NAT Gateways, and an Amazon Aurora database.
 
-The template builds a VPC with the following components:
+## Key Components
+
+### Parameters
+
+- **VPCCIDR**: CIDR block for the VPC (default: `10.0.0.0/16`).
+- **PublicSubnet1CIDR - DBSubnet3CIDR**: CIDR blocks for public, private, and database subnets in three AZs.
+- **AMIId**: Amazon Machine Image (AMI) ID for EC2 instances.
+- **InstanceType**: EC2 instance type (default: `t2.micro`).
+- **KeyPairName**: SSH key pair for EC2 instances.
+- **MasterUsername & MasterUserPassword**: Securely stored credentials in AWS Systems Manager (SSM) Parameter Store for the Aurora DB cluster.
 
 ### VPC
-The main VPC where all subnets will reside, with a configurable CIDR block passed as a parameter. The VPC supports multiple subnet types, including public, private, and database subnets.
 
-### Subnets
+- **VPC**: The core network component, using a user-defined CIDR block to create a custom VPC.
+- **Subnets**: 
+  - **Public Subnets**: Provide internet-facing resources with public IP addresses.
+  - **Private Subnets**: Hold resources not requiring direct internet access.
+  - **Database Subnets**: Specifically for hosting the Aurora database instances, spread across AZs for high availability.
 
-- **Public Subnets**: Three public subnets, one in each of the three AZs, where instances can be launched with public IPs to provide internet access.
-- **Private Subnets**: Three private subnets, one in each AZ, where instances can communicate outbound to the internet through the NAT Gateway.
-- **Database Subnets**: Three isolated subnets across AZs designed for use by database services such as Amazon RDS or Aurora. These subnets do not have direct internet access for security purposes.
+### Internet Gateway and NAT Gateways
 
-### Internet Gateway and NAT Gateway
-
-- **Internet Gateway (IGW)**: Provides internet access for public subnets, allowing inbound and outbound traffic to resources such as web servers.
-- **NAT Gateway (NGW)**: Enables instances in the private subnets to access the internet for updates or other services while remaining inaccessible from the internet.
+- **Internet Gateway**: Attached to the VPC to allow public subnets internet access.
+- **NAT Gateways**: Enable resources in private subnets to connect to the internet for updates, without exposing them to inbound internet traffic.
 
 ### Route Tables
 
-- **Public Route Table**: Routes traffic from public subnets to the internet via the Internet Gateway.
-- **Private Route Table**: Routes traffic from private subnets through the NAT Gateway for outbound internet access.
-- **Database Route Table**: These route tables are dedicated to the database subnets, which are typically isolated from the internet unless explicitly configured otherwise.
+- **Public Route Table**: Routes public traffic (0.0.0.0/0) to the Internet Gateway.
+- **Private Route Table**: Routes private subnet traffic through NAT gateways, allowing internet access while remaining private.
+
+### Amazon Aurora Cluster
+
+- **Aurora DB Cluster**: Multi-AZ Amazon Aurora MySQL cluster with automated backups and a retention period of 7 days.
+- **DB Subnet Group**: Aurora subnets defined across three AZs for high availability.
+- **DBClusterSecurityGroup**: Secures Aurora DB, allowing traffic on port 3306 (MySQL).
+
+### Security Groups
+
+- **ALB Security Group**: Allows inbound HTTP traffic (port 80) from any IP address to the ALB.
+- **Web Server Security Group**: Allows traffic from the ALB to EC2 instances on port 80, and allows the EC2 instances to access the Aurora DB on port 3306.
+- **DBClusterSecurityGroup**: Restricts access to the Aurora DB to connections from internal private subnets.
+
+### Application Load Balancer (ALB)
+
+- **ALB**: Internet-facing load balancer that distributes HTTP traffic across the EC2 instances.
+- **ALB Target Group**: Health checks and routes traffic to healthy EC2 instances in the Auto Scaling Group.
+
+### Auto Scaling Group
+
+- **Launch Configuration**: Defines how EC2 instances are launched, including instance type, AMI ID, security group, and user data for instance initialization.
+- **Auto Scaling Group**: Ensures that a minimum of 1 and a maximum of 3 EC2 instances are running in private subnets, scaling based on load.
 
 ### Outputs
 
-Each of the following components is exported so that they can be referenced by other CloudFormation stacks using `Fn::ImportValue`:
+The stack exports the following resources for future reference or use by other CloudFormation stacks:
+- **VPCID**: The ID of the created VPC.
+- **Public Subnet IDs**: IDs for public subnets in each AZ.
+- **Private Subnet IDs**: IDs for private subnets in each AZ.
+- **DB Subnet IDs**: IDs for database subnets in each AZ.
+- **ALB ARN**: The Amazon Resource Name (ARN) for the ALB.
+- **Aurora Cluster Endpoint**: The connection endpoint for the Aurora DB cluster.
 
-- VPC ID
-- Public Subnet IDs (across 3 AZs)
-- Private Subnet IDs (across 3 AZs)
-- Database Subnet IDs (across 3 AZs)
+## Usage
 
-By using this VPC CloudFormation stack, other stacks (e.g., those with Application Load Balancers, EC2 instances, and Aurora) can import the VPC and subnet IDs, avoiding the need to duplicate network configuration.
+1. Launch the CloudFormation stack using this template and provide the required parameters (e.g., AMI ID, EC2 key pair name, SSM parameter paths for the Aurora DB credentials).
+2. Once deployed, the infrastructure will be fully set up with a scalable, highly available environment, ready to host a web application behind an ALB and securely connected to an Aurora DB.
 
+### Notes
 
-# Infrastructure CloudFormation Template
-
-This CloudFormation template builds the infrastructure using the VPC created from a previous template. It imports the VPC, subnets, and necessary networking components and provisions the following:
-
-- **Application Load Balancer (ALB)** in the public subnets.
-- **Auto Scaling group** with EC2 instances located in different private subnets.
-- EC2 instances serve a "Hello World" webpage.
-- **Amazon Aurora** database in the DB subnets.
-- **NAT Gateway** in the public subnet. One NAT Gateway is provisioned per AZ, and each private subnet routes traffic to the corresponding NAT Gateway.
-
-This template assumes that the **VPC**, **Public**, **Private**, and **DB subnets** have already been created in another stack and are exported using the `Export` function. We import them using the `Fn::ImportValue` function.
-
-## Breakdown
-
-### Imports:
-The template imports the VPC and subnets (public, private, and DB) created by the previous stack using `Fn::ImportValue`.
-
-### Application Load Balancer (ALB):
-- ALB is provisioned across the three public subnets and listens on port 80 (HTTP).
-- It forwards traffic to a target group containing the EC2 instances in the private subnets.
-
-### Auto Scaling Group:
-- EC2 instances are launched in three private subnets using an **Auto Scaling Group**.
-- The instances are web servers that serve a simple "Hello World" HTML page.
-
-### Amazon Aurora:
-- An Amazon Aurora **DB Cluster** is created in the three DB subnets, and its security group allows traffic from the EC2 instances via port 3306 (MySQL).
-
-#### Secure Database Credentials with AWS SSM Parameter Store
-
-##### SSM Parameter Store
-
-- Replace `/myapp/db/masteruser` and `/myapp/db/masterpassword` with the paths where your secure strings are stored.
-- The `ssm-secure` syntax ensures that values are retrieved securely.
-
-###### Benefits
-
-- **Secure Storage**: Credentials are stored securely and are not hardcoded in the template.
-- **Encryption**: Both Secrets Manager and SSM Parameter Store automatically encrypt secrets at rest.
-- **Auditing and Rotation**: Secrets Manager allows you to rotate credentials automatically and provides auditing capabilities.
-
-
-### Security Groups:
-- Separate security groups are configured for the ALB, EC2 instances, and Aurora DB.
-- The EC2 security group allows HTTP traffic from the ALB, and the Aurora security group allows MySQL traffic from the EC2 instances.
-
-
-### IAM Instance Profile and IAM Role
-
-- **IAM Instance Profile for EC2**: Added AutoScalingInstanceProfile to associate the role with EC2 instances.
-- **IAM Role for Auto Scaling Group**: Added AutoScalingRole with policies to allow Auto Scaling to manage EC2 instances.
-
-    1. **Assume Role Policy**: This allows Auto Scaling to assume the role.
-    2. **Managed Policies**: These provide the necessary permissions for Auto Scaling and the instances it manages. Common policies include:
-    - `AmazonEC2RoleforAutoScaling`: Grants permissions for Auto Scaling to interact with EC2 instances.
-    - `AmazonEC2RoleforLaunchWizard`: Allows for the management of EC2 instances during the launch process.
-    - `AmazonSSMReadOnlyAccess`: Provides read-only access to SSM parameters, useful for accessing parameters such as database credentials.
-
-
-## Reusability:
-This template can be reused for additional Availability Zones by importing the respective subnets in the same region.
-
-# Explanation of Infra CloudFormation Outputs
-
-The following outputs are provided by the CloudFormation template for the infrastructure:
-
-## 1. VPC ID
-- **Description**: Outputs the ID of the VPC.
-- **Usage**: This can be used to identify and reference the VPC where resources are provisioned.
-
-## 2. Public Subnets & Private Subnets
-- **Description**: Outputs the IDs of the public and private subnets across the three Availability Zones.
-- **Usage**: These subnet IDs can be used for placing resources in specific subnets, like EC2 instances, load balancers, etc.
-
-## 3. NAT Gateways
-- **Description**: Outputs the IDs of the NAT Gateways created in each AZ.
-- **Usage**: The NAT Gateway IDs are used to route outbound internet traffic from private subnets through the respective NAT Gateway in each AZ.
-
-## 4. ALB DNS Name
-- **Description**: Outputs the DNS name of the Application Load Balancer (ALB).
-- **Usage**: The DNS name is used to access the web application served by the EC2 instances behind the ALB.
-
-## 5. Auto Scaling Group Name
-- **Description**: Outputs the name of the EC2 Auto Scaling group.
-- **Usage**: This is useful for managing and monitoring the EC2 Auto Scaling group, which ensures the web server instances are highly available.
-
-## 6. Aurora DB Cluster Endpoint
-- **Description**: Outputs the endpoint of the Amazon Aurora DB Cluster.
-- **Usage**: The endpoint is used to connect the application (running on EC2) to the Aurora database for read/write operations.
-
-## 7. Aurora DB Cluster Read Endpoint
-- **Description**: Outputs the read-only endpoint of the Aurora DB Cluster.
-- **Usage**: The read endpoint is used for offloading read operations to improve the performance and scalability of the database.
-
-These outputs are crucial for understanding and utilizing the resources provisioned by the CloudFormation template, making it easier to manage, connect, and scale the infrastructure.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- **CIDR Blocks**: These are IP ranges used for defining network segments (subnets). CIDR blocks in this template control how traffic is routed within the VPC and between resources.
+- **High Availability**: The use of multiple Availability Zones (AZs) ensures redundancy and fault tolerance.
+- **Security**: Security groups and SSM parameters ensure secure access control for instances, databases, and application layers.
 

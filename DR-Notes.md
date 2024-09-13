@@ -26,13 +26,14 @@ The ALB distributes incoming traffic across multiple AZs, ensuring high availabi
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
         - !Ref PublicSubnet3
+      SecurityGroups: [ !Ref ALBSecurityGroup ]
       Scheme: internet-facing
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
           Value: '60'
-      SecurityGroups:
-        - !Ref ALBSecurityGroup
-      Type: application 
+      Tags:
+        - Key: Name
+          Value: MyALB
 ```
 
 ### 2. **Auto Scaling Group (ASG)**
@@ -42,16 +43,19 @@ The Auto Scaling Group maintains the appropriate number of EC2 instances across 
   AutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '2'
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
         - !Ref PrivateSubnet3
-      LaunchConfigurationName: !Ref AutoScalingLaunchConfig
-      MinSize: 3
-      MaxSize: 3
-      DesiredCapacity: 3
-      TargetGroupARNs:
-        - !Ref ALBTargetGroup 
+      Tags:
+        - Key: Name
+          Value: WebServer
+          PropagateAtLaunch: true
+   
 ```
 
 ### 3. **Route 53 Failover Routing**
@@ -86,17 +90,19 @@ Deploying a NAT Gateway in each Availability Zone ensures that resources in priv
 Amazon Aurora automatically promotes a read replica to be the new primary instance with write capability in the event of a primary instance failure. This process is automated and typically completed within seconds to ensure minimal downtime.
 
 ```yaml
-  AuroraDBCluster:
+  AuroraCluster:
     Type: 'AWS::RDS::DBCluster'
     Properties:
-      Engine: aurora
-      EngineMode: provisioned
-      MasterUsername: !Sub '{{resolve:ssm-secure:/myapp/db/masteruser:1}}'
-      MasterUserPassword: !Sub '{{resolve:ssm-secure:/myapp/db/masterpassword:1}}'
+      Engine: aurora-mysql
+      EngineVersion: '8.0.mysql_aurora.3.05.2'
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
       DBSubnetGroupName: !Ref DBSubnetGroup
-      VpcSecurityGroupIds:
-        - !Ref DBSecurityGroup
-      BackupRetentionPeriod: 
+      VpcSecurityGroupIds: [ !Ref DBClusterSecurityGroup ]
+      BackupRetentionPeriod: 7
+      Tags:
+        - Key: Name
+          Value: MyAuroraCluster
   ```
 
 ### 6. **Health Checks**

@@ -1,149 +1,357 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Infrastructure Template with ALB, Auto Scaling, Aurora, and NAT Gateway per AZ using existing VPC and Subnets
+Description: VPC with Public, Private, and Database subnets across 3 AZs
 
 Parameters:
+  VPCCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC
+  PublicSubnet1CIDR:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for Public Subnet 1
+  PublicSubnet2CIDR:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for Public Subnet 2
+  PublicSubnet3CIDR:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for Public Subnet 3
+  PrivateSubnet1CIDR:
+    Type: String
+    Default: 10.0.4.0/24
+    Description: CIDR block for Private Subnet 1
+  PrivateSubnet2CIDR:
+    Type: String
+    Default: 10.0.5.0/24
+    Description: CIDR block for Private Subnet 2
+  PrivateSubnet3CIDR:
+    Type: String
+    Default: 10.0.6.0/24
+    Description: CIDR block for Private Subnet 3
+  DBSubnet1CIDR:
+    Type: String
+    Default: 10.0.7.0/24
+    Description: CIDR block for Database Subnet 1
+  DBSubnet2CIDR:
+    Type: String
+    Default: 10.0.8.0/24
+    Description: CIDR block for Database Subnet 2
+  DBSubnet3CIDR:
+    Type: String
+    Default: 10.0.9.0/24
+    Description: CIDR block for Database Subnet 3
+  AMIId:
+    Type: String
+    Description: AMI ID for the EC2 instances
   InstanceType:
     Type: String
-    Default: t3.micro
+    Default: t2.micro
     Description: EC2 instance type
   KeyPairName:
-    Type: AWS::EC2::KeyPair::KeyName
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: String
+    Description: Key pair name for the EC2 instances
+  MasterUsername:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /myapp/db/master-username
+    Description: SSM parameter for the Aurora master username
+  MasterUserPassword:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /myapp/db/master-password
+    Description: SSM parameter for the Aurora master password
 
 Resources:
-  # Import VPC and Subnets
+  # VPC
   VPC:
     Type: 'AWS::EC2::VPC'
-    Description: Import the existing VPC
-    Value: !ImportValue VPCID
+    Properties:
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: MyVPC
 
+  # Internet Gateway for Public Subnets
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MyVPC-InternetGateway
+
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public Subnets (in 3 AZs)
   PublicSubnet1:
     Type: 'AWS::EC2::Subnet'
-    Description: Import Public Subnet 1
-    Value: !ImportValue PublicSubnet1
-
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet1
   PublicSubnet2:
     Type: 'AWS::EC2::Subnet'
-    Description: Import Public Subnet 2
-    Value: !ImportValue PublicSubnet2
-
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet2
   PublicSubnet3:
     Type: 'AWS::EC2::Subnet'
-    Description: Import Public Subnet 3
-    Value: !ImportValue PublicSubnet3
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet3CIDR
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet3
 
+  # Private Subnets (in 3 AZs)
   PrivateSubnet1:
     Type: 'AWS::EC2::Subnet'
-    Description: Import Private Subnet 1
-    Value: !ImportValue PrivateSubnet1
-
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet1
   PrivateSubnet2:
     Type: 'AWS::EC2::Subnet'
-    Description: Import Private Subnet 2
-    Value: !ImportValue PrivateSubnet2
-
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet2
   PrivateSubnet3:
     Type: 'AWS::EC2::Subnet'
-    Description: Import Private Subnet 3
-    Value: !ImportValue PrivateSubnet3
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet3
 
+  # Database Subnets (in 3 AZs)
   DBSubnet1:
     Type: 'AWS::EC2::Subnet'
-    Description: Import DB Subnet 1
-    Value: !ImportValue DBSubnet1
-
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DBSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: DBSubnet1
   DBSubnet2:
     Type: 'AWS::EC2::Subnet'
-    Description: Import DB Subnet 2
-    Value: !ImportValue DBSubnet2
-
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DBSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: DBSubnet2
   DBSubnet3:
     Type: 'AWS::EC2::Subnet'
-    Description: Import DB Subnet 3
-    Value: !ImportValue DBSubnet3
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DBSubnet3CIDR
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: DBSubnet3
 
-  # NAT Gateways and EIPs for Each AZ
-  EIP1:
+  # NAT Gateways and Elastic IPs
+  NatGatewayEIP1:
     Type: 'AWS::EC2::EIP'
-
-  NATGateway1:
+    Properties:
+      Domain: vpc
+  NatGateway1:
     Type: 'AWS::EC2::NatGateway'
     Properties:
-      AllocationId: !GetAtt EIP1.AllocationId
+      AllocationId: !GetAtt NatGatewayEIP1.AllocationId
       SubnetId: !Ref PublicSubnet1
 
-  EIP2:
+  NatGatewayEIP2:
     Type: 'AWS::EC2::EIP'
-
-  NATGateway2:
+    Properties:
+      Domain: vpc
+  NatGateway2:
     Type: 'AWS::EC2::NatGateway'
     Properties:
-      AllocationId: !GetAtt EIP2.AllocationId
+      AllocationId: !GetAtt NatGatewayEIP2.AllocationId
       SubnetId: !Ref PublicSubnet2
 
-  EIP3:
+  NatGatewayEIP3:
     Type: 'AWS::EC2::EIP'
-
-  NATGateway3:
+    Properties:
+      Domain: vpc
+  NatGateway3:
     Type: 'AWS::EC2::NatGateway'
     Properties:
-      AllocationId: !GetAtt EIP3.AllocationId
+      AllocationId: !GetAtt NatGatewayEIP3.AllocationId
       SubnetId: !Ref PublicSubnet3
 
-  # Private Subnet Route Tables to NAT Gateways
-  PrivateRouteTable1:
+  # Route Tables
+  PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
 
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+
+  DBRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: DBRouteTable
+
+  # Routes for the Public Subnet
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # Routes for the Private Subnets (through NAT Gateways)
   PrivateRoute1:
     Type: 'AWS::EC2::Route'
     Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway1
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 10.0.4.0/24
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateRoute2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 10.0.5.0/24
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateRoute3:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 10.0.6.0/24
+      NatGatewayId: !Ref NatGateway3
+
+  # Subnet Associations with Route Tables
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable
 
   PrivateSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PrivateSubnet1
-      RouteTableId: !Ref PrivateRouteTable1
-
-  PrivateRouteTable2:
-    Type: 'AWS::EC2::RouteTable'
-    Properties:
-      VpcId: !Ref VPC
-
-  PrivateRoute2:
-    Type: 'AWS::EC2::Route'
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway2
+      RouteTableId: !Ref PrivateRouteTable
 
   PrivateSubnet2RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PrivateSubnet2
-      RouteTableId: !Ref PrivateRouteTable2
-
-  PrivateRouteTable3:
-    Type: 'AWS::EC2::RouteTable'
-    Properties:
-      VpcId: !Ref VPC
-
-  PrivateRoute3:
-    Type: 'AWS::EC2::Route'
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable3
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway3
+      RouteTableId: !Ref PrivateRouteTable
 
   PrivateSubnet3RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PrivateSubnet3
-      RouteTableId: !Ref PrivateRouteTable3
+      RouteTableId: !Ref PrivateRouteTable
+
+  DBSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref DBSubnet1
+      RouteTableId: !Ref DBRouteTable
+
+  DBSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref DBSubnet2
+      RouteTableId: !Ref DBRouteTable
+
+  DBSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref DBSubnet3
+      RouteTableId: !Ref DBRouteTable
+
+  # Aurora Cluster
+  AuroraCluster:
+    Type: 'AWS::RDS::DBCluster'
+    Properties:
+      Engine: aurora-mysql
+      EngineVersion: '8.0.mysql_aurora.3.05.2'
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds: [ !Ref DBClusterSecurityGroup ]
+      BackupRetentionPeriod: 7
+      Tags:
+        - Key: Name
+          Value: MyAuroraCluster
+
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Aurora cluster
+      SubnetIds: 
+        - !Ref DBSubnet1
+        - !Ref DBSubnet2
+        - !Ref DBSubnet3
+
+  DBClusterSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Security group for Aurora cluster
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
 
   # Application Load Balancer (ALB)
   ALB:
@@ -154,87 +362,60 @@ Resources:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
         - !Ref PublicSubnet3
+      SecurityGroups: [ !Ref ALBSecurityGroup ]
       Scheme: internet-facing
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
           Value: '60'
-      SecurityGroups:
-        - !Ref ALBSecurityGroup
-      Type: application
+      Tags:
+        - Key: Name
+          Value: MyALB
 
-  ALBListener:
-    Type: 'AWS::ElasticLoadBalancingV2::Listener'
-    Properties:
-      LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref ALBTargetGroup
-
-  ALBTargetGroup:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
-    Properties:
-      Name: ALBTargetGroup
-      VpcId: !Ref VPC
-      Protocol: HTTP
-      Port: 80
-      TargetType: instance
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /
-      HealthCheckPort: traffic-port
-      HealthCheckIntervalSeconds: 30
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 5
-      UnhealthyThresholdCount: 2
-
-  # Security Group for ALB
   ALBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Security group for ALB
       VpcId: !Ref VPC
+      GroupDescription: Security group for ALB
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
 
-  # Auto Scaling Group for EC2 instances
-  AutoScalingRole:
-    Type: 'AWS::IAM::Role'
+  # Target Group
+  ALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
-      RoleName: AutoScalingRole
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: autoscaling.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAutoScaling
-        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforLaunchWizard
-        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: '80'
+      HealthCheckPath: /health
 
-  AutoScalingInstanceProfile:
-    Type: 'AWS::IAM::InstanceProfile'
+  # Listener
+  ALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
-      Roles:
-        - !Ref AutoScalingRole
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: '200'
+            ContentType: text/plain
+            MessageBody: 'Hello World'
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
 
-  AutoScalingLaunchConfig:
+  # Auto Scaling Group and Launch Configuration
+  LaunchConfiguration:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
-      ImageId: ami-0c55b159cbfafe1f0  # Amazon Linux 2 AMI
+      ImageId: !Ref AMIId
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPairName
-      SecurityGroups:
-        - !Ref EC2SecurityGroup
-      IamInstanceProfile: !Ref AutoScalingInstanceProfile
+      SecurityGroups: [ !Ref WebServerSecurityGroup ]
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -247,137 +428,104 @@ Resources:
   AutoScalingGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '2'
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
         - !Ref PrivateSubnet3
-      LaunchConfigurationName: !Ref AutoScalingLaunchConfig
-      MinSize: 3
-      MaxSize: 3
-      DesiredCapacity: 3
-      TargetGroupARNs:
-        - !Ref ALBTargetGroup
+      Tags:
+        - Key: Name
+          Value: WebServer
+          PropagateAtLaunch: true
 
-  # Security Group for EC2 instances
-  EC2SecurityGroup:
+  WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Security group for EC2 instances
       VpcId: !Ref VPC
+      GroupDescription: Security group for web servers
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           SourceSecurityGroupId: !Ref ALBSecurityGroup
       SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
-
-  # Amazon Aurora DB Cluster
-  AuroraDBCluster:
-    Type: 'AWS::RDS::DBCluster'
-    Properties:
-      Engine: aurora
-      EngineMode: provisioned
-      MasterUsername: !Sub '{{resolve:ssm-secure:/myapp/db/masteruser:1}}'
-      MasterUserPassword: !Sub '{{resolve:ssm-secure:/myapp/db/masterpassword:1}}'
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      VpcSecurityGroupIds:
-        - !Ref DBSecurityGroup
-      BackupRetentionPeriod: 7
-
-  # Aurora DB Subnet Group
-  DBSubnetGroup:
-    Type: 'AWS::RDS::DBSubnetGroup'
-    Properties:
-      DBSubnetGroupDescription: Aurora DB Subnet Group
-      SubnetIds:
-        - !Ref DBSubnet1
-        - !Ref DBSubnet2
-        - !Ref DBSubnet3
-
-  # Security Group for Aurora DB
-  DBSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Security group for Aurora DB
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
-          SourceSecurityGroupId: !Ref EC2SecurityGroup
-      SecurityGroupEgress:
-        - IpProtocol: -1
           CidrIp: 0.0.0.0/0
 
 Outputs:
   VPCID:
-    Description: The VPC ID
+    Description: The ID of the VPC
     Value: !Ref VPC
     Export:
       Name: VPCID
 
   PublicSubnet1ID:
-    Description: Public Subnet 1 ID
+    Description: The ID of Public Subnet 1
     Value: !Ref PublicSubnet1
     Export:
       Name: PublicSubnet1ID
 
   PublicSubnet2ID:
-    Description: Public Subnet 2 ID
+    Description: The ID of Public Subnet 2
     Value: !Ref PublicSubnet2
     Export:
       Name: PublicSubnet2ID
 
   PublicSubnet3ID:
-    Description: Public Subnet 3 ID
+    Description: The ID of Public Subnet 3
     Value: !Ref PublicSubnet3
     Export:
       Name: PublicSubnet3ID
 
   PrivateSubnet1ID:
-    Description: Private Subnet 1 ID
+    Description: The ID of Private Subnet 1
     Value: !Ref PrivateSubnet1
     Export:
       Name: PrivateSubnet1ID
 
   PrivateSubnet2ID:
-    Description: Private Subnet 2 ID
+    Description: The ID of Private Subnet 2
     Value: !Ref PrivateSubnet2
     Export:
       Name: PrivateSubnet2ID
 
   PrivateSubnet3ID:
-    Description: Private Subnet 3 ID
+    Description: The ID of Private Subnet 3
     Value: !Ref PrivateSubnet3
     Export:
       Name: PrivateSubnet3ID
 
-  NATGateway1ID:
-    Description: NAT Gateway 1 ID
-    Value: !Ref NATGateway1
+  DBSubnet1ID:
+    Description: The ID of DB Subnet 1
+    Value: !Ref DBSubnet1
+    Export:
+      Name: DBSubnet1ID
 
-  NATGateway2ID:
-    Description: NAT Gateway 2 ID
-    Value: !Ref NATGateway2
+  DBSubnet2ID:
+    Description: The ID of DB Subnet 2
+    Value: !Ref DBSubnet2
+    Export:
+      Name: DBSubnet2ID
 
-  NATGateway3ID:
-    Description: NAT Gateway 3 ID
-    Value: !Ref NATGateway3
+  DBSubnet3ID:
+    Description: The ID of DB Subnet 3
+    Value: !Ref DBSubnet3
+    Export:
+      Name: DBSubnet3ID
 
-  ALBDNS:
-    Description: DNS name of the ALB
-    Value: !GetAtt ALB.DNSName
+  ALBArn:
+    Description: The ARN of the ALB
+    Value: !Ref ALB
+    Export:
+      Name: ALBArn
 
-  EC2AutoScalingGroupName:
-    Description: Auto Scaling Group Name for EC2 instances
-    Value: !Ref AutoScalingGroup
-
-  AuroraDBClusterEndpoint:
-    Description: Endpoint for the Aurora DB Cluster
-    Value: !GetAtt AuroraDBCluster.Endpoint.Address
-
-  AuroraDBClusterReadEndpoint:
-    Description: Read-only Endpoint for the Aurora DB Cluster
-    Value: !GetAtt AuroraDBCluster.ReadEndpoint.Address
+  AuroraClusterEndpoint:
+    Description: The endpoint of the Aurora DB cluster
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+    Export:
+      Name: AuroraClusterEndpoint
